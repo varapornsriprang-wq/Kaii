@@ -1,0 +1,499 @@
+<title>นักสำรวจความร้อน</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mali:wght@500;600;700&family=Sarabun:wght@400;500;600&display=swap">
+<style>
+  /* Layout: one calm centered column. A thermometer at the top is the score, filling up as she answers. Soft cool-blue ground, warm peach for "heat". */
+  :root {
+    --bg: #eef4f8;
+    --surface: #ffffff;
+    --fg: #23394a;
+    --muted: #5a7284;
+    --line: #d5e2ea;
+    --tube: #e3edf3;
+    --accent: #f08a5d;
+    --on-accent: #35170a;
+    --cool: #6fa8c9;
+    --good: #2f8f6d;
+    --good-bg: #e2f4ec;
+    --warn-line: #d9a441;
+    --warn-bg: #fff2d9;
+    --warn-ink: #6b4a0b;
+    --focus: #2a6f9a;
+    --font-display: "Mali", "Noto Sans Thai Looped", "Tahoma", sans-serif;
+    --font-body: "Sarabun", "Noto Sans Thai", "Tahoma", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15212b;
+      --surface: #1e2f3b;
+      --fg: #e6eef3;
+      --muted: #9fb4c2;
+      --line: #32495a;
+      --tube: #2a3f4e;
+      --accent: #f4a07a;
+      --cool: #7fb6d6;
+      --good: #6fd0a8;
+      --good-bg: #1d3a32;
+      --warn-line: #d9a441;
+      --warn-bg: #3a3120;
+      --warn-ink: #f0cf8e;
+      --focus: #8cc7ea;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15212b;
+    --surface: #1e2f3b;
+    --fg: #e6eef3;
+    --muted: #9fb4c2;
+    --line: #32495a;
+    --tube: #2a3f4e;
+    --accent: #f4a07a;
+    --cool: #7fb6d6;
+    --good: #6fd0a8;
+    --good-bg: #1d3a32;
+    --warn-line: #d9a441;
+    --warn-bg: #3a3120;
+    --warn-ink: #f0cf8e;
+    --focus: #8cc7ea;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.7;
+    padding-block: 24px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  h1, h2, h3 { font-family: var(--font-display); line-height: 1.45; margin: 0; text-wrap: balance; }
+  p { margin: 0; }
+  main { max-width: 640px; margin-inline: auto; display: flex; flex-direction: column; gap: 18px; }
+  .brand { font-family: var(--font-display); font-weight: 600; color: var(--muted); font-size: 15px; letter-spacing: 0.02em; }
+
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  .btn {
+    background: var(--accent); color: var(--on-accent);
+    border: 0; border-radius: 999px; cursor: pointer;
+    font-family: var(--font-display); font-weight: 700; font-size: 18px;
+    padding: 12px 28px; min-height: 52px;
+    transition: transform .15s ease, filter .15s ease;
+  }
+  .btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+  .btn.ghost { background: transparent; color: var(--fg); border: 2px solid var(--line); }
+
+  /* thermometer score */
+  .status { display: flex; flex-direction: column; gap: 6px; }
+  .status-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 15px; color: var(--muted); }
+  .status-row b { color: var(--fg); font-family: var(--font-display); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .thermo { display: flex; align-items: center; }
+  .bulb { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); flex: none; margin-right: -8px; z-index: 1; }
+  .tube { position: relative; flex: 1; min-width: 0; height: 16px; border-radius: 0 8px 8px 0; background: var(--tube); border: 2px solid var(--line); overflow: hidden; }
+  .mercury { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); transition: width .7s ease; }
+  .ticks { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(10% - 1px), var(--line) calc(10% - 1px), var(--line) 10%); opacity: .8; }
+
+  /* start */
+  .hero { display: flex; flex-direction: column; gap: 14px; }
+  .hero h1 { font-size: clamp(30px, 8vw, 40px); font-weight: 700; }
+  .hero .lead { font-size: 19px; }
+  .rules { list-style: none; padding: 0; margin: 4px 0 0; display: grid; gap: 10px; }
+  .rules li { display: flex; gap: 12px; align-items: baseline; }
+  .rules .k { flex: none; font-family: var(--font-display); font-weight: 700; color: var(--accent); min-width: 5.2em; }
+  .note { color: var(--muted); font-size: 15px; }
+  .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+
+  /* timer */
+  .timer { display: flex; align-items: center; gap: 12px; }
+  .timer-track { flex: 1; min-width: 0; height: 10px; border-radius: 5px; background: var(--tube); overflow: hidden; }
+  .timer-fill { height: 100%; width: 100%; border-radius: 5px; background: var(--cool); }
+  .timer.low .timer-fill { background: var(--accent); }
+  .timer-num { min-width: 5.6em; text-align: right; font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* question */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .qno { font-family: var(--font-display); font-weight: 600; color: var(--muted); font-size: 15px; }
+  .qtext { font-size: clamp(19px, 5vw, 22px); font-weight: 600; }
+  .options { display: grid; gap: 10px; }
+  .option {
+    display: flex; gap: 12px; align-items: flex-start; text-align: left; width: 100%;
+    padding: 12px 14px; min-height: 56px; border-radius: 14px;
+    border: 2px solid var(--line); background: var(--surface); cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .option:hover { border-color: var(--cool); }
+  .option .badge {
+    flex: none; width: 32px; height: 32px; border-radius: 50%;
+    background: var(--tube); display: grid; place-items: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 16px; line-height: 1;
+  }
+  .option .label { flex: 1; min-width: 0; padding-top: 2px; overflow-wrap: anywhere; }
+  .option .tag { flex: none; font-size: 13px; font-weight: 600; padding: 2px 10px; border-radius: 999px; align-self: center; white-space: nowrap; }
+  .options.locked .option { cursor: default; }
+  .options.locked .option:hover { border-color: var(--line); }
+  .option.correct { border-color: var(--good); background: var(--good-bg); }
+  .option.correct .badge { background: var(--good); color: var(--surface); }
+  .option.correct .tag { background: var(--good); color: var(--surface); }
+  .option.picked { border-color: var(--warn-line); background: var(--warn-bg); color: var(--warn-ink); }
+  .option.picked .badge { background: var(--warn-line); color: #3a2a05; }
+  .option.picked .tag { background: var(--warn-line); color: #3a2a05; }
+  .options.locked .option:not(.correct):not(.picked) { opacity: .6; }
+
+  .feedback { border-radius: 16px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .feedback.ok { background: var(--good-bg); }
+  .feedback.try { background: var(--warn-bg); color: var(--warn-ink); }
+  .feedback h3 { font-size: 19px; font-weight: 700; }
+  .feedback .ans { font-weight: 600; }
+  .feedback .btn { align-self: flex-start; margin-top: 6px; }
+
+  /* result */
+  .result h2 { font-size: clamp(26px, 7vw, 34px); font-weight: 700; }
+  .bigscore { font-family: var(--font-display); font-weight: 700; font-size: clamp(44px, 14vw, 64px); line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .bigscore small { font-size: 0.4em; color: var(--muted); font-weight: 600; }
+  .review { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; }
+  .review li::marker { color: var(--accent); }
+  .divider { border: 0; border-top: 1px solid var(--line); margin: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mercury, .btn, .option { transition: none; }
+  }
+</style>
+
+<main>
+  <div class="brand">นักสำรวจความร้อน · วิทยาศาสตร์ ม.1</div>
+
+  <!-- start -->
+  <section id="start" class="hero card" aria-labelledby="start-title">
+    <h1 id="start-title">สวัสดี วราภรณ์ มาสำรวจความร้อนกัน</h1>
+    <p class="lead">ทบทวนสั้นๆ ก่อนจบคาบ เรื่องความร้อนกับการเปลี่ยนแปลงอุณหภูมิของสสาร ใช้เวลาประมาณ 10 นาที</p>
+    <ul class="rules">
+      <li><span class="k">10 ข้อ</span><span>เลือกคำตอบที่คิดว่าถูกที่สุด</span></li>
+      <li><span class="k">20 วินาที</span><span>ต่อหนึ่งข้อ มีแถบเวลาบอกให้เห็น</span></li>
+      <li><span class="k">+10 คะแนน</span><span>เมื่อตอบถูก คะแนนเต็ม 100 ปรอทจะค่อยๆ ขึ้นไปเรื่อยๆ</span></li>
+    </ul>
+    <p class="note">ไม่มีการแข่งกับใคร ตอบผิดหรือตอบไม่ทันก็ไม่เป็นไร ทุกข้อมีเฉลยและคำอธิบายให้อ่าน</p>
+    <div class="actions"><button class="btn" id="startBtn" type="button">เริ่มสำรวจ</button></div>
+  </section>
+
+  <!-- game status (thermometer) -->
+  <div class="status" id="status" hidden>
+    <div class="status-row"><span id="progressText">ข้อ 1 จาก 10</span><span>คะแนน <b id="scoreText">0</b> / 100</span></div>
+    <div class="thermo" id="thermo" role="img" aria-label="คะแนน 0 จาก 100">
+      <div class="bulb"></div>
+      <div class="tube"><div class="mercury" id="mercury"></div><div class="ticks"></div></div>
+    </div>
+  </div>
+
+  <!-- question -->
+  <section id="play" hidden aria-live="polite">
+    <div class="card">
+      <div class="timer" id="timer">
+        <div class="timer-track"><div class="timer-fill" id="timerFill"></div></div>
+        <div class="timer-num" id="timerNum">เหลือ 20 วินาที</div>
+      </div>
+      <div class="qno" id="qno"></div>
+      <h2 class="qtext" id="qtext"></h2>
+      <div class="options" id="options" role="group" aria-labelledby="qtext"></div>
+      <div class="feedback" id="feedback" hidden></div>
+    </div>
+  </section>
+
+  <!-- result -->
+  <section id="result" class="card result" hidden aria-labelledby="result-title">
+    <h2 id="result-title"></h2>
+    <div class="bigscore" id="finalScore"></div>
+    <p id="finalMsg"></p>
+    <hr class="divider">
+    <h3 id="reviewTitle">เก็บเกร็ดความรู้อีกนิด</h3>
+    <ul class="review" id="reviewList"></ul>
+    <p class="note">ไม่มีการจัดอันดับและไม่มีใครแพ้ มีแต่ได้ทบทวนเพิ่มขึ้น</p>
+    <div class="actions"><button class="btn" id="againBtn" type="button">เล่นอีกครั้ง</button></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var TOTAL_TIME = 20;
+  var LETTERS = ['ก', 'ข', 'ค', 'ง'];
+
+  // correct answer is always listed first here; options are shuffled when shown
+  var BANK = [
+    {
+      q: 'ความร้อนคืออะไร',
+      o: ['พลังงานรูปหนึ่งที่ถ่ายโอนจากสิ่งที่อุณหภูมิสูงกว่าไปยังสิ่งที่อุณหภูมิต่ำกว่า', 'ระดับความร้อนหรือความเย็นของสสาร', 'หน่วยที่ใช้วัดอุณหภูมิ', 'ชื่อของโลหะชนิดหนึ่ง'],
+      e: 'ความร้อนเป็นพลังงาน และจะถ่ายโอนจากที่ร้อนกว่าไปที่เย็นกว่าเสมอ ส่วน "ระดับความร้อนหรือความเย็น" คือความหมายของอุณหภูมิ',
+      t: 'ความร้อนคือพลังงานที่ถ่ายโอนจากสิ่งที่ร้อนกว่าไปยังสิ่งที่เย็นกว่า'
+    },
+    {
+      q: 'อุณหภูมิบอกอะไรเราได้',
+      o: ['ระดับความร้อนหรือความเย็นของสสาร', 'น้ำหนักของสสาร', 'ปริมาตรของสสาร', 'สีของสสาร'],
+      e: 'อุณหภูมิบอกว่าสสารร้อนหรือเย็นแค่ไหน เช่น 25 °C รู้สึกสบายๆ ส่วน 40 °C ร้อนมาก',
+      t: 'อุณหภูมิบอกระดับความร้อนหรือความเย็นของสสาร'
+    },
+    {
+      q: 'เครื่องมือในข้อใดใช้วัดอุณหภูมิ',
+      o: ['เทอร์มอมิเตอร์', 'ไม้บรรทัด', 'เครื่องชั่ง', 'กระบอกตวง'],
+      e: 'เทอร์มอมิเตอร์มีของเหลวอยู่ในหลอดแก้ว เมื่อร้อนขึ้นของเหลวจะขยายตัวและเลื่อนขึ้นไปชี้ค่าอุณหภูมิ',
+      t: 'เทอร์มอมิเตอร์เป็นเครื่องมือวัดอุณหภูมิ'
+    },
+    {
+      q: 'ข้อใดเป็นหน่วยของอุณหภูมิ',
+      o: ['องศาเซลเซียส (°C)', 'กิโลกรัม (kg)', 'เมตร (m)', 'ลิตร (L)'],
+      e: 'องศาเซลเซียสเป็นหน่วยที่เราใช้บ่อยที่สุด นอกจากนี้ยังมีเคลวิน (K) และองศาฟาเรนไฮต์ (°F)',
+      t: 'หน่วยของอุณหภูมิที่ใช้บ่อยคือองศาเซลเซียส (°C)'
+    },
+    {
+      q: 'ถือแก้วน้ำร้อนไว้ แล้วรู้สึกอุ่นที่มือ เพราะอะไร',
+      o: ['ความร้อนถ่ายโอนจากแก้วน้ำร้อนมาที่มือ', 'ความเย็นไหลจากมือเข้าไปในแก้ว', 'มือสร้างความร้อนขึ้นมาเอง', 'ไม่มีอะไรถ่ายโอนเลย'],
+      e: 'ความร้อนไหลจากที่ร้อนกว่าไปที่เย็นกว่าเสมอ เรื่องนี้มีข้อคิดนิดหนึ่ง คือไม่มี "ความเย็น" ที่ไหลได้ ที่เรารู้สึกเย็นเพราะความร้อนไหลออกจากตัวเรา',
+      t: 'ความร้อนไหลจากร้อนไปเย็นเสมอ ไม่มี "ความเย็น" ที่ไหลได้'
+    },
+    {
+      q: 'โดยทั่วไป เมื่อสสารได้รับความร้อน จะเกิดอะไรขึ้น',
+      o: ['อนุภาคเคลื่อนที่เร็วขึ้น และอุณหภูมิสูงขึ้น', 'อนุภาคหยุดนิ่ง และอุณหภูมิลดลง', 'อนุภาคเคลื่อนที่ช้าลง และอุณหภูมิลดลง', 'อนุภาคหายไป และอุณหภูมิเท่าเดิมเสมอ'],
+      e: 'ความร้อนที่ได้รับทำให้อนุภาคของสสารสั่นหรือเคลื่อนที่แรงและเร็วขึ้น เราจึงวัดอุณหภูมิได้สูงขึ้น',
+      t: 'เมื่อสสารได้รับความร้อน อนุภาคจะเคลื่อนที่เร็วขึ้น อุณหภูมิจึงสูงขึ้น'
+    },
+    {
+      q: 'เอาปลายแท่งโลหะข้างหนึ่งไปอังไฟ ผ่านไปสักพักปลายอีกข้างก็ร้อนด้วย เพราะอะไร',
+      o: ['ความร้อนถ่ายโอนผ่านเนื้อโลหะ จากปลายที่ร้อนไปยังปลายที่เย็นกว่า', 'ความเย็นในแท่งโลหะไหลออกไปทางปลายอีกข้าง', 'โลหะผลิตความร้อนใหม่ขึ้นมาเองเมื่อโดนไฟ', 'ปลายอีกข้างร้อนเพราะอากาศรอบๆ เท่านั้น'],
+      e: 'ความร้อนเดินทางผ่านเนื้อของโลหะจากจุดที่ร้อนไปจุดที่เย็นกว่า เรียกว่าการนำความร้อน โลหะนำความร้อนได้ดี',
+      t: 'ความร้อนถ่ายโอนผ่านเนื้อโลหะได้ (การนำความร้อน)'
+    },
+    {
+      q: 'น้ำบริสุทธิ์เดือดที่ระดับน้ำทะเล เมื่ออุณหภูมิประมาณเท่าใด',
+      o: ['100 °C', '0 °C', '37 °C', '50 °C'],
+      e: 'ที่ความดันบรรยากาศปกติ น้ำเดือดที่ 100 °C และกลายเป็นน้ำแข็งที่ 0 °C ส่วน 37 °C เป็นอุณหภูมิร่างกายคนปกติ',
+      t: 'น้ำเดือดที่ 100 °C และเยือกแข็งที่ 0 °C (ความดันบรรยากาศปกติ)'
+    },
+    {
+      q: 'ข้อใดกล่าวถูกต้องเกี่ยวกับความร้อนและอุณหภูมิ',
+      o: ['ความร้อนเป็นพลังงานที่ถ่ายโอนได้ ส่วนอุณหภูมิบอกระดับความร้อนของสสาร', 'ความร้อนกับอุณหภูมิคือสิ่งเดียวกันทุกอย่าง', 'อุณหภูมิเป็นพลังงานที่ไหลจากวัตถุหนึ่งไปอีกวัตถุหนึ่ง', 'ความร้อนวัดได้ด้วยเทอร์มอมิเตอร์โดยตรง'],
+      e: 'สองคำนี้ใกล้กันมากแต่ไม่เหมือนกัน ความร้อนเป็นพลังงาน มีหน่วยเป็นจูล (J) ส่วนอุณหภูมิวัดด้วยเทอร์มอมิเตอร์ ได้เป็น °C',
+      t: 'ความร้อนเป็นพลังงาน (หน่วยจูล) ส่วนอุณหภูมิบอกระดับความร้อน (หน่วย °C)'
+    },
+    {
+      q: 'เทน้ำร้อนผสมกับน้ำเย็นในภาชนะเดียวกัน แล้วรอสักครู่ อุณหภูมิของน้ำจะเป็นอย่างไร',
+      o: ['เท่ากันทั้งภาชนะ และมีค่าอยู่ระหว่างอุณหภูมิเดิมของน้ำสองก้อน', 'น้ำร้อนยังร้อนเท่าเดิม น้ำเย็นยังเย็นเท่าเดิม', 'ร้อนกว่าน้ำร้อนเดิมอีก', 'เย็นกว่าน้ำเย็นเดิมอีก'],
+      e: 'ความร้อนถ่ายโอนจากน้ำร้อนไปน้ำเย็นจนอุณหภูมิเท่ากัน เรียกว่าสมดุลความร้อน อุณหภูมิสุดท้ายจึงอยู่ตรงกลางระหว่างสองค่าเดิม',
+      t: 'ความร้อนถ่ายโอนจนอุณหภูมิเท่ากัน เรียกว่าสมดุลความร้อน'
+    }
+  ];
+
+  var PRAISE = ['ถูกต้อง!', 'ใช่เลย!', 'แม่นมาก!', 'เก่งจัง!'];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var els = {
+    start: $('start'), status: $('status'), play: $('play'), result: $('result'),
+    progressText: $('progressText'), scoreText: $('scoreText'), thermo: $('thermo'), mercury: $('mercury'),
+    timer: $('timer'), timerFill: $('timerFill'), timerNum: $('timerNum'),
+    qno: $('qno'), qtext: $('qtext'), options: $('options'), feedback: $('feedback'),
+    finalScore: $('finalScore'), finalMsg: $('finalMsg'), reviewList: $('reviewList'),
+    reviewTitle: $('reviewTitle'), resultTitle: $('result-title')
+  };
+
+  var game = null;
+  var timerId = null;
+
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function show(name) {
+    els.start.hidden = name !== 'start';
+    els.status.hidden = name === 'start';
+    els.play.hidden = name !== 'play';
+    els.result.hidden = name !== 'result';
+  }
+
+  function setScore(n) {
+    els.scoreText.textContent = n;
+    els.mercury.style.width = n + '%';
+    els.thermo.setAttribute('aria-label', 'คะแนน ' + n + ' จาก 100');
+  }
+
+  function startGame() {
+    game = { order: shuffle(BANK), i: 0, score: 0, missed: [], locked: false, current: null };
+    setScore(0);
+    show('play');
+    showQuestion();
+  }
+
+  function showQuestion() {
+    var item = game.order[game.i];
+    var correctText = item.o[0];
+    var opts = shuffle(item.o);
+    game.current = { item: item, opts: opts, correctIndex: opts.indexOf(correctText) };
+    game.locked = false;
+
+    els.progressText.textContent = 'ข้อ ' + (game.i + 1) + ' จาก ' + game.order.length;
+    els.qno.textContent = 'คำถามข้อที่ ' + (game.i + 1);
+    els.qtext.textContent = item.q;
+    els.feedback.hidden = true;
+    els.feedback.innerHTML = '';
+    els.options.classList.remove('locked');
+    els.options.innerHTML = '';
+
+    opts.forEach(function (text, idx) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'option';
+      b.dataset.index = idx;
+      b.innerHTML = '<span class="badge"></span><span class="label"></span>';
+      b.querySelector('.badge').textContent = LETTERS[idx];
+      b.querySelector('.label').textContent = text;
+      b.addEventListener('click', function () { answer(idx); });
+      els.options.appendChild(b);
+    });
+
+    startTimer();
+  }
+
+  function startTimer() {
+    stopTimer();
+    var startAt = Date.now();
+    function tick() {
+      var left = TOTAL_TIME - (Date.now() - startAt) / 1000;
+      if (left <= 0) {
+        updateTimer(0);
+        stopTimer();
+        answer(-1);
+        return;
+      }
+      updateTimer(left);
+    }
+    updateTimer(TOTAL_TIME);
+    timerId = setInterval(tick, 100);
+  }
+
+  function stopTimer() {
+    if (timerId) { clearInterval(timerId); timerId = null; }
+  }
+
+  function updateTimer(left) {
+    els.timerFill.style.width = (left / TOTAL_TIME * 100) + '%';
+    els.timerNum.textContent = 'เหลือ ' + Math.ceil(left) + ' วินาที';
+    els.timer.classList.toggle('low', left <= 5);
+  }
+
+  function addTag(btn, text) {
+    var s = document.createElement('span');
+    s.className = 'tag';
+    s.textContent = text;
+    btn.appendChild(s);
+  }
+
+  function answer(choice) {
+    if (game.locked) return;
+    game.locked = true;
+    stopTimer();
+
+    var cur = game.current;
+    var correct = choice === cur.correctIndex;
+    var timedOut = choice === -1;
+    var buttons = els.options.querySelectorAll('.option');
+    els.options.classList.add('locked');
+
+    buttons[cur.correctIndex].classList.add('correct');
+    addTag(buttons[cur.correctIndex], 'คำตอบที่ถูก');
+    if (!correct && !timedOut) {
+      buttons[choice].classList.add('picked');
+      addTag(buttons[choice], 'คำตอบของเรา');
+    }
+
+    var title, cls;
+    if (correct) {
+      game.score += 10;
+      setScore(game.score);
+      title = PRAISE[Math.floor(Math.random() * PRAISE.length)] + ' +10 คะแนน';
+      cls = 'ok';
+    } else {
+      game.missed.push(cur.item.t);
+      title = timedOut ? 'หมดเวลาแล้ว ไม่เป็นไรนะ' : 'ข้อนี้ยังไม่ใช่ ไม่เป็นไรนะ';
+      cls = 'try';
+    }
+
+    var last = game.i === game.order.length - 1;
+    els.feedback.className = 'feedback ' + cls;
+    els.feedback.innerHTML = '';
+    var h = document.createElement('h3'); h.textContent = title;
+    var a = document.createElement('p'); a.className = 'ans'; a.textContent = 'เฉลย: ' + LETTERS[cur.correctIndex] + '. ' + cur.opts[cur.correctIndex];
+    var e = document.createElement('p'); e.textContent = cur.item.e;
+    var n = document.createElement('button'); n.type = 'button'; n.className = 'btn'; n.id = 'nextBtn';
+    n.textContent = last ? 'ดูผลสรุป' : 'ข้อต่อไป';
+    n.addEventListener('click', next);
+    els.feedback.appendChild(h); els.feedback.appendChild(a); els.feedback.appendChild(e); els.feedback.appendChild(n);
+    els.feedback.hidden = false;
+    n.focus({ preventScroll: true });
+    els.feedback.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function next() {
+    game.i += 1;
+    if (game.i >= game.order.length) { finish(); return; }
+    showQuestion();
+    window.scrollTo({ top: 0 });
+  }
+
+  function finish() {
+    var s = game.score;
+    var title, msg;
+    if (s === 100) {
+      title = 'เยี่ยมมากเลย วราภรณ์!';
+      msg = 'ตอบถูกครบทุกข้อ เข้าใจเรื่องความร้อนกับอุณหภูมิได้แจ่มแจ๋ว ปรอทขึ้นสุดหลอดเลย';
+    } else if (s >= 70) {
+      title = 'เก่งมากเลย วราภรณ์!';
+      msg = 'เข้าใจเรื่องนี้ได้ดีมาก เหลืออีกนิดเดียวก็เต็มแล้ว อ่านเกร็ดความรู้ด้านล่างอีกรอบก็แน่นขึ้นอีก';
+    } else if (s >= 40) {
+      title = 'ทำได้ดีนะ วราภรณ์';
+      msg = 'ได้ครึ่งทางแล้ว และข้อที่พลาดก็คือข้อที่ได้เรียนรู้เพิ่ม ลองอ่านเกร็ดความรู้ด้านล่าง แล้วเล่นอีกรอบได้เลย';
+    } else {
+      title = 'ขอบคุณที่ลองทบทวนนะ วราภรณ์';
+      msg = 'ทบทวนครั้งแรกอาจยังไม่คุ้นก็เป็นเรื่องปกติ ทุกข้อที่เฉลยไปคือความรู้ที่ได้เพิ่ม ค่อยๆ อ่านด้านล่าง แล้วลองใหม่เมื่อพร้อม';
+    }
+    els.resultTitle.textContent = title;
+    els.finalScore.innerHTML = s + ' <small>/ 100 คะแนน</small>';
+    els.finalMsg.textContent = msg;
+
+    els.reviewList.innerHTML = '';
+    if (game.missed.length === 0) {
+      els.reviewTitle.textContent = 'ไม่มีอะไรต้องทบทวนเพิ่ม';
+      var li0 = document.createElement('li');
+      li0.textContent = 'ตอบถูกทุกข้อแล้ว ลองอธิบายให้เพื่อนฟังดูสิ ว่าความร้อนกับอุณหภูมิต่างกันอย่างไร';
+      els.reviewList.appendChild(li0);
+    } else {
+      els.reviewTitle.textContent = 'เก็บเกร็ดความรู้อีกนิด';
+      game.missed.forEach(function (t) {
+        var li = document.createElement('li');
+        li.textContent = t;
+        els.reviewList.appendChild(li);
+      });
+    }
+    setScore(s);
+    els.progressText.textContent = 'ครบ 10 ข้อแล้ว';
+    show('result');
+    window.scrollTo({ top: 0 });
+  }
+
+  $('startBtn').addEventListener('click', startGame);
+  $('againBtn').addEventListener('click', startGame);
+
+  document.addEventListener('keydown', function (ev) {
+    if (!game || els.play.hidden || game.locked) return;
+    var n = parseInt(ev.key, 10);
+    if (n >= 1 && n <= 4 && game.current && n - 1 < game.current.opts.length) answer(n - 1);
+  });
+
+  show('start');
+})();
+</script>
